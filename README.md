@@ -22,9 +22,10 @@ MemoryManager (facade)
  │    ├─ memory   in-process ring buffer (zero deps)  ← default
  │    └─ redis    Redis list per session — shared across processes/machines
  └─ LongTermBackend   pluggable, LLM-backed extraction          (backends/)
-      ├─ vector   plain numpy cosine + pluggable embedder + disk persistence ← default
-      ├─ mem0     mem0 library, DeepSeek as its extraction LLM
-      └─ letta    Letta archival memory (needs a Letta server)
+      ├─ vector    plain numpy cosine + pluggable embedder + disk persistence ← default
+      ├─ mem0      mem0 library, DeepSeek as its extraction LLM
+      ├─ lightrag  knowledge-graph memory; builds its own entity/relation graph
+      └─ letta     Letta archival memory (needs a Letta server)
  └─ DeepSeekLLM     one OpenAI-compatible client, injected where extraction is needed
 ```
 
@@ -62,8 +63,9 @@ prompt = ctx.as_prompt_block()                         # feed into your next LLM
 
 ```bash
 LONG_TERM_BACKEND=vector python demo.py   # default, no extra install
-LONG_TERM_BACKEND=mem0   python demo.py   # pip install "mem0ai>=0.1.40"
-LONG_TERM_BACKEND=letta  python demo.py   # pip install "letta-client>=0.1" + Letta server + LETTA_AGENT_ID
+LONG_TERM_BACKEND=mem0     python demo.py   # pip install "mem0ai>=0.1.40"
+LONG_TERM_BACKEND=lightrag python demo.py   # pip install "lightrag-hku>=1.0"  (graph memory)
+LONG_TERM_BACKEND=letta    python demo.py   # pip install "letta-client>=0.1" + Letta server + LETTA_AGENT_ID
 
 # Share short-term memory across processes:
 SHORT_TERM_STORE=redis REDIS_URL=redis://localhost:6379/0 python demo.py  # pip install redis
@@ -82,7 +84,8 @@ python tests/test_smoke.py     # fully offline; also discoverable via `pytest te
 | `DEEPSEEK_API_KEY` | — | DeepSeek key (OpenAI-compatible endpoint) |
 | `DEEPSEEK_MODEL` | `deepseek-v4-flash` | model id |
 | `DEEPSEEK_API_BASE` | `https://api.deepseek.com` | base url |
-| `LONG_TERM_BACKEND` | `vector` | `vector` \| `mem0` \| `letta` |
+| `LONG_TERM_BACKEND` | `vector` | `vector` \| `mem0` \| `lightrag` \| `letta` |
+| `LIGHTRAG_WORKING_DIR` | `.data/lightrag` | per-user graph dir (lightrag backend) |
 | `SHORT_TERM_MAX_TURNS` | `12` | raw turns kept per session |
 | `CONSOLIDATE_EVERY` | `4` | promote short→long every N user turns |
 
@@ -96,6 +99,10 @@ python tests/test_smoke.py     # fully offline; also discoverable via `pytest te
   persist to disk (atomic JSON write, auto-loaded on startup).
 - Short-term sharing across processes: set `SHORT_TERM_STORE=redis`. Within a
   single process the default `memory` store already shares across agents.
+- The `lightrag` backend builds a knowledge graph and does its own extraction,
+  so it supports **add + search** (search returns graph-aware context). It does
+  **not** support `get_all`/`delete` (no flat memory list) — reset by removing a
+  user's dir under `LIGHTRAG_WORKING_DIR`.
 
 ## Adding a backend
 

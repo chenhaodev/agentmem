@@ -23,7 +23,10 @@ class Config:
     deepseek_max_retries: int = 3
 
     # --- backend selection ---
-    long_term_backend: str = "vector"  # "vector" | "mem0" | "letta"
+    long_term_backend: str = "vector"  # "vector" | "mem0" | "letta" | "lightrag"
+
+    # --- lightrag backend ---
+    lightrag_working_dir: str = ".data/lightrag"  # per-user subdir created under this
 
     # --- short-term ---
     short_term_store: str = "memory"  # "memory" | "redis"
@@ -52,6 +55,7 @@ class Config:
             deepseek_timeout=int(os.getenv("DEEPSEEK_TIMEOUT", "60")),
             deepseek_max_retries=int(os.getenv("DEEPSEEK_MAX_RETRIES", "3")),
             long_term_backend=os.getenv("LONG_TERM_BACKEND", "vector"),
+            lightrag_working_dir=os.getenv("LIGHTRAG_WORKING_DIR", ".data/lightrag"),
             short_term_store=os.getenv("SHORT_TERM_STORE", "memory"),
             short_term_max_turns=int(os.getenv("SHORT_TERM_MAX_TURNS", "12")),
             redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),

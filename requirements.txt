@@ -5,6 +5,7 @@ python-dotenv>=1.0.0    # load .env
 
 # Optional — install only what you switch to:
 #   pip install "mem0ai>=0.1.40"       # LONG_TERM_BACKEND=mem0
+#   pip install "lightrag-hku>=1.0"    # LONG_TERM_BACKEND=lightrag (graph memory)
 #   pip install "letta-client>=0.1"    # LONG_TERM_BACKEND=letta
 #   pip install redis                  # SHORT_TERM_STORE=redis (cross-process)
 #   pip install sentence-transformers  # EMBEDDING_PROVIDER=sentence_transformers

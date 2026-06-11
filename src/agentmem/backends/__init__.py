@@ -30,8 +30,13 @@ def build_backend(config: Config, llm: DeepSeekLLM) -> LongTermBackend:
         from .letta_backend import LettaBackend
 
         return LettaBackend(config)
+    if name == "lightrag":
+        from .lightrag_backend import LightRAGBackend
+
+        return LightRAGBackend(config)
     raise ValueError(
-        f"Unknown LONG_TERM_BACKEND={name!r}. Expected one of: vector, mem0, letta."
+        f"Unknown LONG_TERM_BACKEND={name!r}. "
+        "Expected one of: vector, mem0, letta, lightrag."
     )
 
 

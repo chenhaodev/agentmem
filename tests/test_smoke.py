@@ -82,6 +82,41 @@ def test_build_context_shape():
     print("ok  build_context returns recent + memories block")
 
 
+def test_unknown_backend_errors_clearly():
+    from agentmem.backends import build_backend
+    from agentmem.llm import DeepSeekLLM
+
+    cfg = _cfg(long_term_backend="nope")
+    try:
+        build_backend(cfg, DeepSeekLLM(cfg))
+        assert False, "expected ValueError for unknown backend"
+    except ValueError as e:
+        assert "lightrag" in str(e)  # error lists all known backends
+    print("ok  unknown backend raises a helpful ValueError")
+
+
+def test_lightrag_optional_dep_message():
+    """LightRAG selected but not installed must fail with our guidance, not a
+    raw ModuleNotFoundError (skips cleanly if lightrag IS installed)."""
+    from agentmem.backends import build_backend
+    from agentmem.llm import DeepSeekLLM
+
+    try:
+        import lightrag  # noqa: F401
+
+        print("skip lightrag installed; dep-message path not exercised")
+        return
+    except ImportError:
+        pass
+    cfg = _cfg(long_term_backend="lightrag")
+    try:
+        build_backend(cfg, DeepSeekLLM(cfg))
+        assert False, "expected ImportError"
+    except ImportError as e:
+        assert "lightrag-hku" in str(e)
+    print("ok  lightrag missing-dep gives install guidance")
+
+
 def test_vector_persistence_roundtrip():
     with tempfile.TemporaryDirectory() as d:
         path = os.path.join(d, "mem.json")
