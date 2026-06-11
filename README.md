@@ -31,7 +31,9 @@ MemoryManager (facade)
 Embedders for the vector backend (`EMBEDDING_PROVIDER`): `auto` (local
 sentence-transformers → hashing fallback), `hash` (offline, zero-dep),
 `sentence_transformers`, or `openai` (any OpenAI-compatible `/embeddings`
-endpoint via `EMBEDDING_BASE_URL`).
+endpoint via `EMBEDDING_BASE_URL`). `sentence_transformers` runs on CPU — no
+GPU needed. On older macOS see `requirements-local-cpu.txt` for the pinned,
+verified-working dependency set.
 
 Write path: `add_turn` → short-term (always) → consolidate to long-term every
 `CONSOLIDATE_EVERY` user turns (extraction happens here, off the hot path).

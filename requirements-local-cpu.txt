@@ -1,0 +1,31 @@
+# Local CPU install — pinned for older macOS (macOS 12 / darwin 21.6, no GPU).
+#
+# WHY THIS FILE EXISTS:
+# On this machine the newest `torch` with available wheels is 2.2.2, and the
+# latest transformers / sentence-transformers / numpy are NOT compatible with
+# it. requirements.txt stays portable (unpinned); these pins are the set
+# verified to actually run here. On a newer OS you do NOT need this file —
+# just `pip install sentence-transformers`.
+#
+# Verified working: DeepSeek-V4-Flash extraction + semantic recall, all on CPU
+# (torch.cuda.is_available() == False).
+
+# Core (same as requirements.txt, repeated so this file installs standalone)
+openai>=1.40.0
+python-dotenv>=1.0.0
+
+# Pinned for torch 2.2.2 compatibility on old macOS
+torch==2.2.2                  # newest torch with wheels for this macOS
+transformers==4.44.2          # transformers 5.x requires a newer torch
+sentence-transformers==3.0.1  # EMBEDDING_PROVIDER=sentence_transformers
+numpy==1.26.4                 # torch 2.2.2 cannot convert numpy 2.x tensors
+
+# INSTALL (this Python lacks a CA bundle, so bypass SSL for PyPI only):
+#   python3 -m pip install --user \
+#     --trusted-host pypi.org --trusted-host files.pythonhosted.org \
+#     -r requirements-local-cpu.txt
+#
+# RUN (point TLS at certifi so DeepSeek + HuggingFace downloads verify):
+#   export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
+#   export EMBEDDING_PROVIDER=sentence_transformers
+#   python3 demo.py
