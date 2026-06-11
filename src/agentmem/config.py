@@ -28,6 +28,11 @@ class Config:
     # --- lightrag backend ---
     lightrag_working_dir: str = ".data/lightrag"  # per-user subdir created under this
 
+    # --- mem0 backend (local stack: deepseek + HF embeddings + embedded qdrant) ---
+    mem0_embedder_provider: str = "huggingface"
+    mem0_embedding_dims: int = 384  # all-MiniLM-L6-v2 -> 384; match your embedder
+    mem0_vector_path: str = ".data/mem0_qdrant"
+
     # --- short-term ---
     short_term_store: str = "memory"  # "memory" | "redis"
     short_term_max_turns: int = 12  # raw turns kept per session buffer
@@ -56,6 +61,9 @@ class Config:
             deepseek_max_retries=int(os.getenv("DEEPSEEK_MAX_RETRIES", "3")),
             long_term_backend=os.getenv("LONG_TERM_BACKEND", "vector"),
             lightrag_working_dir=os.getenv("LIGHTRAG_WORKING_DIR", ".data/lightrag"),
+            mem0_embedder_provider=os.getenv("MEM0_EMBEDDER_PROVIDER", "huggingface"),
+            mem0_embedding_dims=int(os.getenv("MEM0_EMBEDDING_DIMS", "384")),
+            mem0_vector_path=os.getenv("MEM0_VECTOR_PATH", ".data/mem0_qdrant"),
             short_term_store=os.getenv("SHORT_TERM_STORE", "memory"),
             short_term_max_turns=int(os.getenv("SHORT_TERM_MAX_TURNS", "12")),
             redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),

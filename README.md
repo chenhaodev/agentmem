@@ -63,9 +63,20 @@ prompt = ctx.as_prompt_block()                         # feed into your next LLM
 
 ```bash
 LONG_TERM_BACKEND=vector python demo.py   # default, no extra install
-LONG_TERM_BACKEND=mem0     python demo.py   # pip install "mem0ai>=0.1.40"
+LONG_TERM_BACKEND=mem0     python demo.py   # pip install "mem0ai>=2.0" qdrant-client sentence-transformers
 LONG_TERM_BACKEND=lightrag python demo.py   # pip install "lightrag-hku>=1.0"  (graph memory)
 LONG_TERM_BACKEND=letta    python demo.py   # pip install "letta-client>=0.1" + Letta server + LETTA_AGENT_ID
+```
+
+Both `mem0` and `lightrag` are verified live against DeepSeek-V4-Flash
+(mem0 2.0.5 = DeepSeek + HuggingFace MiniLM embeddings + embedded Qdrant;
+lightrag-hku 1.5.2 = knowledge graph). Reproduce with the opt-in live tests:
+
+```bash
+set -a && . ./.env && set +a
+export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
+export TOKENIZERS_PARALLELISM=false RUN_LIVE=1
+python tests/test_live.py
 
 # Share short-term memory across processes:
 SHORT_TERM_STORE=redis REDIS_URL=redis://localhost:6379/0 python demo.py  # pip install redis

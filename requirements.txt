@@ -4,8 +4,12 @@ numpy>=1.24.0           # plain vector-store backend (cosine search)
 python-dotenv>=1.0.0    # load .env
 
 # Optional — install only what you switch to:
-#   pip install "mem0ai>=0.1.40"       # LONG_TERM_BACKEND=mem0
-#   pip install "lightrag-hku>=1.0"    # LONG_TERM_BACKEND=lightrag (graph memory)
+#   mem0 (verified live, fully local stack):
+#     pip install "mem0ai>=2.0" qdrant-client sentence-transformers
+#   lightrag graph memory (verified live):
+#     pip install "lightrag-hku>=1.0"
 #   pip install "letta-client>=0.1"    # LONG_TERM_BACKEND=letta
 #   pip install redis                  # SHORT_TERM_STORE=redis (cross-process)
 #   pip install sentence-transformers  # EMBEDDING_PROVIDER=sentence_transformers
+# NOTE: on this Python the TLS trust store is missing — see requirements-local-cpu.txt
+#       for the --trusted-host install + SSL_CERT_FILE run workaround.

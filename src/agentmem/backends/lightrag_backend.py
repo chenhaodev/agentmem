@@ -139,12 +139,15 @@ class LightRAGBackend:
         from lightrag import QueryParam
 
         rag = self._get_instance(user_id)
-        context = self._run(
-            rag.aquery(
-                query,
-                param=QueryParam(mode="hybrid", top_k=limit, only_need_context=True),
+        # enable_rerank defaults True in recent LightRAG; we configure no rerank
+        # model, so disable it (and tolerate older versions without the field).
+        try:
+            param = QueryParam(
+                mode="hybrid", top_k=limit, only_need_context=True, enable_rerank=False
             )
-        )
+        except TypeError:
+            param = QueryParam(mode="hybrid", top_k=limit, only_need_context=True)
+        context = self._run(rag.aquery(query, param=param))
         context = (context or "").strip() if isinstance(context, str) else str(context)
         if not context:
             return []
