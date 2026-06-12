@@ -40,7 +40,9 @@ all = [
 dev = ["pytest>=7.0"]
 
 [project.urls]
-Documentation = "https://github.com/"  # update with your repo
+Homepage = "https://github.com/chenhaodev/agentmem"
+Repository = "https://github.com/chenhaodev/agentmem"
+Issues = "https://github.com/chenhaodev/agentmem/issues"
 
 [project.scripts]
 agentmem-demo = "agentmem.__main__:main"
