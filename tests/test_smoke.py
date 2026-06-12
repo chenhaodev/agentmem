@@ -82,6 +82,33 @@ def test_build_context_shape():
     print("ok  build_context returns recent + memories block")
 
 
+def test_async_consolidation_drains_and_dedups():
+    """Background consolidation: add_turn returns without persisting inline; a
+    flush makes the memories searchable; no duplicates; errors are surfaced."""
+    import threading
+
+    mm = MemoryManager(_cfg(consolidation_async=True, consolidate_every=4))
+    try:
+        assert mm._worker is not None
+        for i in range(4):  # 4th user turn submits a background job
+            mm.add_turn("s", "u", Message("user", f"durable fact {i}"))
+        # the worker is a separate thread, not the caller's
+        assert mm._worker._thread is not threading.current_thread()
+        mm.flush()  # block until the background job is done
+        mem = mm.long_term.get_all("u")
+        texts = [m.text for m in mem]
+        assert len(texts) == 4, texts
+        assert len(texts) == len(set(texts)), f"duplicates: {texts}"
+        assert mm.consolidation_errors == [], mm.consolidation_errors
+        # end_session on an async manager must also drain cleanly
+        mm.add_turn("s", "u", Message("user", "one more fact"))
+        end = mm.end_session("s", "u")
+        assert any("one more" in m.text for m in end), end
+        print("ok  async consolidation drains, dedups, surfaces errors")
+    finally:
+        mm.close()
+
+
 def test_unknown_backend_errors_clearly():
     from agentmem.backends import build_backend
     from agentmem.llm import DeepSeekLLM

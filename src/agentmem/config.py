@@ -50,6 +50,7 @@ class Config:
 
     # --- consolidation policy ---
     consolidate_every: int = 4  # promote short->long every N user turns
+    consolidation_async: bool = False  # run consolidation on a background worker
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -74,4 +75,6 @@ class Config:
             embedding_api_key=os.getenv("EMBEDDING_API_KEY", ""),
             vector_persist_path=os.getenv("VECTOR_PERSIST_PATH", ""),
             consolidate_every=int(os.getenv("CONSOLIDATE_EVERY", "4")),
+            consolidation_async=os.getenv("CONSOLIDATION_ASYNC", "").lower()
+            in ("1", "true", "yes"),
         )

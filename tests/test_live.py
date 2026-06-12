@@ -52,6 +52,30 @@ def test_mem0_live():
     print("ok  mem0 live: extracted + recalled peanut allergy")
 
 
+def test_mem0_async_consolidation_live():
+    """add_turn must return immediately while DeepSeek extraction runs in the
+    background; flush() then makes the memory searchable."""
+    if _skip("mem0-async"):
+        return
+    import time
+
+    cfg = Config.from_env()
+    cfg.long_term_backend = "mem0"
+    cfg.consolidation_async = True
+    cfg.consolidate_every = 1
+    cfg.mem0_vector_path = tempfile.mkdtemp(prefix="mem0q_")
+    with MemoryManager(cfg) as mm:
+        t0 = time.time()
+        mm.add_turn("s", "bob", Message("user", "I'm Bob, allergic to peanuts"))
+        elapsed_ms = (time.time() - t0) * 1000
+        assert elapsed_ms < 250, f"add_turn blocked for {elapsed_ms:.0f}ms"
+        mm.flush()
+        assert mm.consolidation_errors == [], mm.consolidation_errors
+        hits = mm.recall("bob", "allergy", k=3)
+        assert any("peanut" in h.text.lower() for h in hits), [h.text for h in hits]
+    print("ok  mem0 async: hot path non-blocking, flush drains, recall works")
+
+
 def test_lightrag_live():
     """LightRAG builds a knowledge graph and retrieves relational context."""
     if _skip("lightrag"):
@@ -76,11 +100,35 @@ def test_lightrag_live():
 
 
 def main():
-    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
-    for t in tests:
-        t()
-    print(f"\n{len(tests)} live test(s) processed (RUN_LIVE={LIVE})")
+    """Run each live test in its OWN subprocess.
+
+    mem0 and LightRAG are heavy ML stacks; running them in one process — and
+    especially running mem0 in a background thread after LightRAG has used the
+    process — interferes (shared torch/threading state). Real deployments use one
+    long-term backend per process, so we isolate each test the same way.
+    """
+    import subprocess
+
+    names = [k for k in sorted(globals()) if k.startswith("test_")]
+    if not LIVE:  # nothing to isolate; just report the skips inline
+        for name in names:
+            globals()[name]()
+        print(f"\n{len(names)} live test(s) skipped (set RUN_LIVE=1)")
+        return
+    failed = []
+    for name in names:
+        print(f"\n=== {name} (isolated subprocess) ===")
+        rc = subprocess.run([sys.executable, __file__, name], env=os.environ).returncode
+        if rc != 0:
+            failed.append(name)
+    print(f"\n{len(names) - len(failed)}/{len(names)} live tests passed")
+    if failed:
+        print("FAILED:", ", ".join(failed))
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1:  # child: run one named test in this fresh process
+        globals()[sys.argv[1]]()
+    else:
+        main()

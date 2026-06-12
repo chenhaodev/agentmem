@@ -37,8 +37,28 @@ GPU needed. On older macOS see `requirements-local-cpu.txt` for the pinned,
 verified-working dependency set.
 
 Write path: `add_turn` → short-term (always) → consolidate to long-term every
-`CONSOLIDATE_EVERY` user turns (extraction happens here, off the hot path).
-Read path: `build_context` → recent raw turns **+** relevance-ranked memories.
+`CONSOLIDATE_EVERY` user turns. Read path: `build_context` → recent raw turns
+**+** relevance-ranked memories.
+
+### Async consolidation
+
+Consolidation runs the LLM (fact extraction / graph building), which is slow. Set
+`CONSOLIDATION_ASYNC=1` to run it on a background worker so `add_turn` returns
+immediately (verified: ~0–1 ms vs seconds inline):
+
+```python
+cfg = Config.from_env(); cfg.consolidation_async = True
+with MemoryManager(cfg) as mm:                 # context manager stops the worker
+    mm.add_turn("s", "u", Message("user", "..."))   # returns instantly
+    mm.flush()                                  # wait for background extraction
+    mm.recall("u", "...")                       # now searchable
+    # end_session() also drains automatically; mm.consolidation_errors surfaces failures
+```
+
+A single worker thread serializes all long-term access (the backends aren't
+thread-safe), so reads and the background write never race. **Run one long-term
+backend per process** — mem0 and LightRAG are heavy ML stacks that interfere when
+sharing a process (the opt-in live tests isolate each in its own subprocess).
 
 ## Quickstart
 
@@ -99,6 +119,7 @@ python tests/test_smoke.py     # fully offline; also discoverable via `pytest te
 | `LIGHTRAG_WORKING_DIR` | `.data/lightrag` | per-user graph dir (lightrag backend) |
 | `SHORT_TERM_MAX_TURNS` | `12` | raw turns kept per session |
 | `CONSOLIDATE_EVERY` | `4` | promote short→long every N user turns |
+| `CONSOLIDATION_ASYNC` | `0` | run consolidation on a background worker (`1` to enable) |
 
 ## Notes & current limits
 
