@@ -162,29 +162,49 @@ agentmem-demo              # console entry point (== python -m agentmem)
 
 ## Benchmark
 
-`benchmark.py` runs the same dataset through each backend in isolated
-subprocesses, measuring write/query latency and recall@3:
+`benchmark.py` runs a shared dataset through each backend in isolated
+subprocesses. Two datasets:
 
 ```bash
-python benchmark.py                # vector mem0 lightrag letta
-python benchmark.py vector mem0    # subset
+python benchmark.py            # EASY set — latency comparison (recall saturates)
+python benchmark.py --hard     # HARD set — retrieval QUALITY (discriminating)
+python benchmark.py --hard vector mem0   # subset
 ```
 
-Indicative single run (this machine, CPU, DeepSeek-V4-Flash, 8 facts / 6 queries):
+The **hard** set (15 facts / 8 queries) is built to break naive retrieval:
+temporal updates (Porto supersedes Lisbon), distractors (sister's allergy vs the
+user's), multi-hop relations (mentor → their lab), and negations (quit coffee →
+tea now). Metrics over the top-5 retrieved: `hit@1`, `hit@3`, `MRR`, and `clean`
+(answer retrieved **and** no stale/wrong fact ranked above it).
 
-| backend  | write (s) | query (ms) | recall@3 | stored |
-|----------|----------:|-----------:|---------:|-------:|
-| vector   |      9.2  |       30   |     1.0  |   10   |
-| mem0     |      8.4  |       22   |     1.0  |    8   |
-| lightrag |     51.4  |     3686   |     1.0  |    1   |
-| letta    |     21.7  |     1980   |     1.0  |    8   |
+Indicative run (this machine, CPU, DeepSeek-V4-Flash):
 
-Recall@3 saturates on this easy set, so the table mainly shows **latency**:
-vector/mem0 give sub-30ms reads (writes dominated by one DeepSeek extraction
-call); LightRAG pays for graph construction (slow write + multi-hop query);
-Letta sits between. `stored` differs by design — extracted facts vs raw passages
-vs one graph doc. Pick by need: speed/personalization → mem0/vector; relational
-reasoning → lightrag; long-running agents → letta.
+| backend  | write (s) | query (ms) | hit@1 | hit@3 | clean | MRR  |
+|----------|----------:|-----------:|------:|------:|------:|-----:|
+| vector   |     10.4  |        27  |  0.38 |  1.0  |  0.38 | 0.67 |
+| mem0     |     13.1  |        27  |  0.25 |  0.62 |  0.38 | 0.50 |
+| lightrag |     77.6  |      3670  |  1.0  |  1.0  |  0.38 | 1.0  |
+| letta    |     48.3  |      2470  |  0.62 |  1.0  |  0.5  | 0.79 |
+
+How to read it:
+
+- **lightrag** `hit@1`/`MRR = 1.0` is an artifact: it returns one graph-context
+  blob containing everything, so the answer is always "rank 1". But `clean =
+  0.38` shows the blob also carries the contradictions — it offloads
+  disambiguation to the downstream LLM rather than discriminating at retrieval.
+- **letta** has the best `clean` (0.5): semantic passage retrieval is best at not
+  surfacing a stale fact above the right one.
+- **vector** finds the answer in the top-3 every time (`hit@3 = 1.0`) but often
+  ranks a distractor first (`hit@1 = 0.38`).
+- **mem0** rephrases/merges facts on extraction, which trims volume but here cost
+  some recall. `clean` is low across the board — the dataset deliberately pits
+  stale vs current facts, which pure vector similarity can't resolve.
+
+Caveats: numbers vary run-to-run (LLM extraction is non-deterministic — mem0
+most); latency is single-run. `stored` (not shown) differs by design: extracted
+facts vs raw passages vs one graph doc. Rules of thumb: speed/personalization →
+mem0/vector; relational/multi-hop reasoning → lightrag; long-running agents with
+precise recall → letta.
 
 ## Tests
 
