@@ -152,6 +152,40 @@ Gotcha: Letta routes Ollama embeddings through its OpenAI client, so the
 endpoint must end in `/v1` (`LETTA_EMBEDDING_ENDPOINT`) — without it Ollama
 returns 404. Verified with Letta v0.16.8 / letta-client 1.12.1.
 
+## Install
+
+```bash
+pip install -e .            # core only (vector backend)
+pip install -e ".[mem0]"   # or [lightrag] / [letta] / [redis] / [embeddings] / [all]
+agentmem-demo              # console entry point (== python -m agentmem)
+```
+
+## Benchmark
+
+`benchmark.py` runs the same dataset through each backend in isolated
+subprocesses, measuring write/query latency and recall@3:
+
+```bash
+python benchmark.py                # vector mem0 lightrag letta
+python benchmark.py vector mem0    # subset
+```
+
+Indicative single run (this machine, CPU, DeepSeek-V4-Flash, 8 facts / 6 queries):
+
+| backend  | write (s) | query (ms) | recall@3 | stored |
+|----------|----------:|-----------:|---------:|-------:|
+| vector   |      9.2  |       30   |     1.0  |   10   |
+| mem0     |      8.4  |       22   |     1.0  |    8   |
+| lightrag |     51.4  |     3686   |     1.0  |    1   |
+| letta    |     21.7  |     1980   |     1.0  |    8   |
+
+Recall@3 saturates on this easy set, so the table mainly shows **latency**:
+vector/mem0 give sub-30ms reads (writes dominated by one DeepSeek extraction
+call); LightRAG pays for graph construction (slow write + multi-hop query);
+Letta sits between. `stored` differs by design — extracted facts vs raw passages
+vs one graph doc. Pick by need: speed/personalization → mem0/vector; relational
+reasoning → lightrag; long-running agents → letta.
+
 ## Tests
 
 ```bash

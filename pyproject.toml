@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentmem"
+version = "0.1.0"
+description = "Switchable agent-memory middleware: short/long separation, pluggable long-term backends (vector, mem0, LightRAG, Letta), powered by DeepSeek-V4-Flash."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["agent", "memory", "llm", "mem0", "lightrag", "letta", "deepseek", "rag"]
+authors = [{ name = "agentmem" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Developers",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "openai>=1.40.0",      # DeepSeek via the OpenAI-compatible client
+  "numpy>=1.24.0",       # vector backend
+  "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+# install only the backend(s) you switch to
+embeddings = ["sentence-transformers"]              # real local embeddings (CPU)
+mem0 = ["mem0ai>=2.0", "qdrant-client", "sentence-transformers"]
+lightrag = ["lightrag-hku>=1.0"]
+letta = ["letta-client>=1.0"]                       # also needs a running Letta server
+redis = ["redis>=5.0"]                              # cross-process short-term
+all = [
+  "sentence-transformers",
+  "mem0ai>=2.0", "qdrant-client",
+  "lightrag-hku>=1.0",
+  "letta-client>=1.0",
+  "redis>=5.0",
+]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Documentation = "https://github.com/"  # update with your repo
+
+[project.scripts]
+agentmem-demo = "agentmem.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# live tests self-skip unless RUN_LIVE=1, so a plain `pytest` run stays offline
+addopts = "-q"
