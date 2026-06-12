@@ -25,7 +25,8 @@ MemoryManager (facade)
       ├─ vector    plain numpy cosine + pluggable embedder + disk persistence ← default
       ├─ mem0      mem0 library, DeepSeek as its extraction LLM
       ├─ lightrag  knowledge-graph memory; builds its own entity/relation graph
-      └─ letta     Letta archival memory (needs a Letta server)
+      ├─ letta     Letta archival memory (needs a Letta server)
+      └─ router    fan-out writes + merged reads across several of the above (a+b)
  └─ DeepSeekLLM     one OpenAI-compatible client, injected where extraction is needed
 ```
 
@@ -100,7 +101,26 @@ python tests/test_live.py
 
 # Share short-term memory across processes:
 SHORT_TERM_STORE=redis REDIS_URL=redis://localhost:6379/0 python demo.py  # pip install redis
+
+# Store long memory in several frameworks at once (cross-backend routing):
+LONG_TERM_BACKEND=vector+mem0 python demo.py
 ```
+
+### Cross-backend routing
+
+Set `LONG_TERM_BACKEND` to a `+`-list to wrap several backends in a router that
+**fans out writes** and **merges reads** — "long memory in different frameworks
+at once". A router *is* a `LongTermBackend`, so nothing else changes.
+
+- **Write:** fans out to all children (`ROUTER_WRITE=first` to write only the
+  first). Route a single write to one child with `add(..., metadata={"backend":
+  "mem0"})`. A child failing doesn't lose the write to the others.
+- **Read:** queries every child and merges. Scores aren't comparable across
+  heterogeneous backends, so the default `ROUTER_MERGE=interleave` (round-robin)
+  gives balanced results; `ROUTER_MERGE=score` sorts by raw score. Results are
+  deduped by text and tagged with `metadata["backend"]` for provenance.
+- Verified live: `vector+mem0` fans out and returns merged, provenance-tagged
+  memories. (Don't combine mem0 + lightrag in one process — see below.)
 
 ## Tests
 
@@ -115,7 +135,9 @@ python tests/test_smoke.py     # fully offline; also discoverable via `pytest te
 | `DEEPSEEK_API_KEY` | — | DeepSeek key (OpenAI-compatible endpoint) |
 | `DEEPSEEK_MODEL` | `deepseek-v4-flash` | model id |
 | `DEEPSEEK_API_BASE` | `https://api.deepseek.com` | base url |
-| `LONG_TERM_BACKEND` | `vector` | `vector` \| `mem0` \| `lightrag` \| `letta` |
+| `LONG_TERM_BACKEND` | `vector` | `vector` \| `mem0` \| `lightrag` \| `letta` \| a `+`-list e.g. `vector+mem0` |
+| `ROUTER_MERGE` | `interleave` | cross-backend read merge: `interleave` \| `score` |
+| `ROUTER_WRITE` | `all` | cross-backend write fan-out: `all` \| `first` |
 | `LIGHTRAG_WORKING_DIR` | `.data/lightrag` | per-user graph dir (lightrag backend) |
 | `SHORT_TERM_MAX_TURNS` | `12` | raw turns kept per session |
 | `CONSOLIDATE_EVERY` | `4` | promote short→long every N user turns |

@@ -109,6 +109,65 @@ def test_async_consolidation_drains_and_dedups():
         mm.close()
 
 
+def _vector_backend():
+    from agentmem.backends.vector import VectorStoreBackend
+    from agentmem.embeddings import HashingEmbedder
+    from agentmem.llm import DeepSeekLLM
+
+    return VectorStoreBackend(DeepSeekLLM(_cfg()), embedder=HashingEmbedder())
+
+
+def test_router_fanout_and_merged_read():
+    """Fan-out write hits every child; merged read draws from both, deduped and
+    tagged with provenance."""
+    from agentmem.backends.router import RouterBackend
+    from agentmem.types import Message
+
+    a, b = _vector_backend(), _vector_backend()
+    router = RouterBackend({"a": a, "b": b})
+    router.add([Message("user", "the user is vegetarian")], user_id="u")
+    # both children got the write
+    assert a.get_all("u") and b.get_all("u")
+    hits = router.search("vegetarian food", user_id="u", limit=5)
+    assert hits, "router returned no results"
+    # deduped across backends (same text stored in both -> one result)
+    texts = [h.text for h in hits]
+    assert len(texts) == len(set(texts)), f"router did not dedup: {texts}"
+    # provenance tag present
+    assert all(h.metadata.get("backend") in ("a", "b") for h in hits)
+    print("ok  router fan-out write + merged/deduped/tagged read")
+
+
+def test_router_per_call_routing():
+    """metadata={'backend': name} routes a write to just that child."""
+    from agentmem.backends.router import RouterBackend
+    from agentmem.types import Message
+
+    a, b = _vector_backend(), _vector_backend()
+    router = RouterBackend({"a": a, "b": b})
+    router.add([Message("user", "only in A")], user_id="u", metadata={"backend": "a"})
+    assert a.get_all("u") and not b.get_all("u"), "per-call routing leaked to B"
+    print("ok  router per-call routing via metadata['backend']")
+
+
+def test_router_factory_parses_multi_name():
+    """LONG_TERM_BACKEND='vector+vector'... uses single-name path for one, router
+    for a list; unknown child names still error clearly."""
+    from agentmem.backends import build_backend
+    from agentmem.backends.router import RouterBackend
+    from agentmem.llm import DeepSeekLLM
+
+    cfg = _cfg(long_term_backend="vector")
+    assert not isinstance(build_backend(cfg, DeepSeekLLM(cfg)), RouterBackend)
+    cfg2 = _cfg(long_term_backend="vector+nope")
+    try:
+        build_backend(cfg2, DeepSeekLLM(cfg2))
+        assert False, "expected ValueError for unknown child"
+    except ValueError as e:
+        assert "nope" in str(e)
+    print("ok  router factory parses lists and errors on unknown child")
+
+
 def test_unknown_backend_errors_clearly():
     from agentmem.backends import build_backend
     from agentmem.llm import DeepSeekLLM

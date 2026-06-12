@@ -99,6 +99,25 @@ def test_lightrag_live():
     print("ok  lightrag live: graph built + relational recall + contract")
 
 
+def test_router_vector_mem0_live():
+    """Cross-backend routing: fan out a write to vector + mem0, merge reads."""
+    if _skip("router"):
+        return
+    cfg = Config.from_env()
+    cfg.long_term_backend = "vector+mem0"
+    cfg.embedding_provider = "sentence_transformers"
+    cfg.mem0_vector_path = tempfile.mkdtemp(prefix="mem0q_")
+    mm = MemoryManager(cfg)
+    mm.add_turn("s", "dana", Message("user", "I am Dana and I am lactose intolerant."))
+    stored = mm.end_session("s", "dana")
+    backends = {m.metadata.get("backend") for m in stored}
+    assert backends == {"vector", "mem0"}, f"fan-out incomplete: {backends}"
+    hits = mm.recall("dana", "what food issues does the user have", k=5)
+    assert hits and {h.metadata.get("backend") for h in hits} & {"vector", "mem0"}
+    assert mm.long_term.errors == [], mm.long_term.errors
+    print("ok  router live: fan-out to vector+mem0, merged provenance-tagged read")
+
+
 def main():
     """Run each live test in its OWN subprocess.
 

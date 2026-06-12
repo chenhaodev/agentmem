@@ -23,7 +23,10 @@ class Config:
     deepseek_max_retries: int = 3
 
     # --- backend selection ---
-    long_term_backend: str = "vector"  # "vector" | "mem0" | "letta" | "lightrag"
+    # single ("mem0") or a "+"/"," list ("vector+mem0") for cross-backend routing
+    long_term_backend: str = "vector"  # vector | mem0 | letta | lightrag | a+b
+    router_merge: str = "interleave"  # how to merge cross-backend reads: interleave | score
+    router_write: str = "all"  # fan-out target: all | first
 
     # --- lightrag backend ---
     lightrag_working_dir: str = ".data/lightrag"  # per-user subdir created under this
@@ -61,6 +64,8 @@ class Config:
             deepseek_timeout=int(os.getenv("DEEPSEEK_TIMEOUT", "60")),
             deepseek_max_retries=int(os.getenv("DEEPSEEK_MAX_RETRIES", "3")),
             long_term_backend=os.getenv("LONG_TERM_BACKEND", "vector"),
+            router_merge=os.getenv("ROUTER_MERGE", "interleave"),
+            router_write=os.getenv("ROUTER_WRITE", "all"),
             lightrag_working_dir=os.getenv("LIGHTRAG_WORKING_DIR", ".data/lightrag"),
             mem0_embedder_provider=os.getenv("MEM0_EMBEDDER_PROVIDER", "huggingface"),
             mem0_embedding_dims=int(os.getenv("MEM0_EMBEDDING_DIMS", "384")),
