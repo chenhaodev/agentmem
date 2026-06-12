@@ -6,6 +6,25 @@ One interface over multiple agent-memory frameworks, with **short-term** and
 **long-term** memory cleanly separated. Powered by **DeepSeek-V4-Flash**
 (OpenAI-compatible). Switch the long-term backend with a single env var.
 
+```python
+from agentmem import MemoryManager, Message
+
+mm = MemoryManager()                       # long-term backend via LONG_TERM_BACKEND (default: vector)
+
+mm.add_turn("s1", "alice", Message("user", "I'm vegetarian and I love hiking in the Alps"))
+mm.end_session("s1", "alice")              # consolidate short-term turns into long-term memory
+
+print(mm.recall("alice", "what food does she eat?"))
+# [MemoryItem(score=0.52, text='User is vegetarian'), ...]
+
+# build a context block for your next LLM prompt: recent turns + relevant memories
+ctx = mm.build_context("s1", "alice", query="trip ideas")
+print(ctx.as_prompt_block())
+```
+
+Switch backends with one env var — `LONG_TERM_BACKEND=mem0` (or `lightrag`,
+`letta`, `vector+mem0` to fan out across several). Nothing else changes.
+
 ## Why this shape
 
 - **Short-term ≠ long-term.** Short-term is the recent raw-turn buffer — kept
