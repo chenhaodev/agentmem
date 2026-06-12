@@ -86,7 +86,7 @@ prompt = ctx.as_prompt_block()                         # feed into your next LLM
 LONG_TERM_BACKEND=vector python demo.py   # default, no extra install
 LONG_TERM_BACKEND=mem0     python demo.py   # pip install "mem0ai>=2.0" qdrant-client sentence-transformers
 LONG_TERM_BACKEND=lightrag python demo.py   # pip install "lightrag-hku>=1.0"  (graph memory)
-LONG_TERM_BACKEND=letta    python demo.py   # pip install "letta-client>=0.1" + Letta server + LETTA_AGENT_ID
+LONG_TERM_BACKEND=letta    python demo.py   # Letta server — see "Letta setup" below
 ```
 
 Both `mem0` and `lightrag` are verified live against DeepSeek-V4-Flash
@@ -122,6 +122,35 @@ at once". A router *is* a `LongTermBackend`, so nothing else changes.
   deduped by text and tagged with `metadata["backend"]` for provenance.
 - Verified live: `vector+mem0` fans out and returns merged, provenance-tagged
   memories. (Don't combine mem0 + lightrag in one process — see below.)
+
+### Letta setup (verified live)
+
+Letta is a stateful agent server; we use its archival memory. It needs an LLM
+**and** an embedding model — DeepSeek has no embeddings, so use a local Ollama
+embedder. The adapter auto-creates one agent per `user_id`.
+
+```bash
+pip install "letta-client>=1.0"
+
+# 1. Ollama embedder (Ollama's OpenAI-compatible embeddings live at /v1)
+ollama pull nomic-embed-text
+
+# 2. Letta server with DeepSeek as the LLM + reach to Ollama
+docker run -d --name letta -p 8283:8283 \
+  -e OPENAI_API_KEY=$DEEPSEEK_API_KEY \
+  -e OPENAI_API_BASE=https://api.deepseek.com/v1 \
+  -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+  letta/letta:latest
+
+# 3. point agentmem at it
+export LONG_TERM_BACKEND=letta
+export LETTA_MODEL=openai-proxy/deepseek-v4-flash
+export LETTA_EMBEDDING_ENDPOINT=http://host.docker.internal:11434/v1   # NOTE the /v1
+```
+
+Gotcha: Letta routes Ollama embeddings through its OpenAI client, so the
+endpoint must end in `/v1` (`LETTA_EMBEDDING_ENDPOINT`) — without it Ollama
+returns 404. Verified with Letta v0.16.8 / letta-client 1.12.1.
 
 ## Tests
 

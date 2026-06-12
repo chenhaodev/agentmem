@@ -8,7 +8,8 @@ python-dotenv>=1.0.0    # load .env
 #     pip install "mem0ai>=2.0" qdrant-client sentence-transformers
 #   lightrag graph memory (verified live):
 #     pip install "lightrag-hku>=1.0"
-#   pip install "letta-client>=0.1"    # LONG_TERM_BACKEND=letta
+#   letta (verified live, needs a running Letta server — see README "Letta setup"):
+#     pip install "letta-client>=1.0"
 #   pip install redis                  # SHORT_TERM_STORE=redis (cross-process)
 #   pip install sentence-transformers  # EMBEDDING_PROVIDER=sentence_transformers
 # NOTE: on this Python the TLS trust store is missing — see requirements-local-cpu.txt

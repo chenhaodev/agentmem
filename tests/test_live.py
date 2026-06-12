@@ -166,6 +166,42 @@ def test_router_vector_mem0_live():
     print("ok  router live: fan-out to vector+mem0, merged provenance-tagged read")
 
 
+def test_letta_live():
+    """Letta archival memory via an auto-created per-user agent (DeepSeek LLM +
+    embeddings). Needs a running Letta server (skips otherwise). Set
+    LETTA_EMBEDDING_ENDPOINT to an OpenAI-compatible embedder, e.g. Ollama /v1."""
+    if _skip("letta"):
+        return
+    import urllib.request
+
+    base = os.getenv("LETTA_BASE_URL", "http://localhost:8283")
+    try:
+        urllib.request.urlopen(base + "/v1/health/", timeout=5)
+    except Exception as e:
+        print(f"skip letta (server not reachable at {base}: {e})")
+        return
+
+    cfg = Config.from_env()
+    cfg.long_term_backend = "letta"
+    uid = "test-erin"
+    mm = MemoryManager(cfg)
+    agent_id = None
+    try:
+        mm.add_turn("s", uid, Message("user", "I am Erin and I am allergic to shellfish."))
+        stored = mm.end_session("s", uid)
+        assert stored, "no passages stored"
+        hits = mm.recall(uid, "what is the user allergic to", k=3)
+        assert any("shellfish" in h.text.lower() for h in hits), [h.text for h in hits]
+        agent_id = mm.long_term._agent_id(uid)
+        print("ok  letta live: per-user agent, archival add + semantic recall")
+    finally:
+        if agent_id:  # clean up the agent we created
+            try:
+                mm.long_term._client.agents.delete(agent_id=agent_id)
+            except Exception:
+                pass
+
+
 def main():
     """Run each live test in its OWN subprocess.
 

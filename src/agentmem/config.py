@@ -36,6 +36,16 @@ class Config:
     mem0_embedding_dims: int = 384  # all-MiniLM-L6-v2 -> 384; match your embedder
     mem0_vector_path: str = ".data/mem0_qdrant"
 
+    # --- letta backend (needs a running Letta server; auto-creates 1 agent/user) ---
+    letta_base_url: str = "http://localhost:8283"
+    letta_model: str = "openai-proxy/deepseek-v4-flash"  # server's LLM handle
+    # embeddings: set letta_embedding_endpoint (OpenAI-compatible, e.g. an Ollama
+    # /v1 url) to use an explicit config; otherwise the letta_embedding handle.
+    letta_embedding_handle: str = "letta/letta-free"
+    letta_embedding_endpoint: str = ""  # e.g. http://host.docker.internal:11434/v1
+    letta_embedding_model: str = "nomic-embed-text:latest"
+    letta_embedding_dim: int = 768
+
     # --- short-term ---
     short_term_store: str = "memory"  # "memory" | "redis"
     short_term_max_turns: int = 12  # raw turns kept per session buffer
@@ -70,6 +80,12 @@ class Config:
             mem0_embedder_provider=os.getenv("MEM0_EMBEDDER_PROVIDER", "huggingface"),
             mem0_embedding_dims=int(os.getenv("MEM0_EMBEDDING_DIMS", "384")),
             mem0_vector_path=os.getenv("MEM0_VECTOR_PATH", ".data/mem0_qdrant"),
+            letta_base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"),
+            letta_model=os.getenv("LETTA_MODEL", "openai-proxy/deepseek-v4-flash"),
+            letta_embedding_handle=os.getenv("LETTA_EMBEDDING_HANDLE", "letta/letta-free"),
+            letta_embedding_endpoint=os.getenv("LETTA_EMBEDDING_ENDPOINT", ""),
+            letta_embedding_model=os.getenv("LETTA_EMBEDDING_MODEL", "nomic-embed-text:latest"),
+            letta_embedding_dim=int(os.getenv("LETTA_EMBEDDING_DIM", "768")),
             short_term_store=os.getenv("SHORT_TERM_STORE", "memory"),
             short_term_max_turns=int(os.getenv("SHORT_TERM_MAX_TURNS", "12")),
             redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
