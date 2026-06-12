@@ -203,7 +203,7 @@ Indicative run (this machine, CPU, DeepSeek-V4-Flash):
 | backend  | write (s) | query (ms) | hit@1 | hit@3 | clean | MRR  |
 |----------|----------:|-----------:|------:|------:|------:|-----:|
 | vector   |     10.4  |        27  |  0.38 |  1.0  |  0.38 | 0.67 |
-| mem0     |     13.1  |        27  |  0.25 |  0.62 |  0.38 | 0.50 |
+| mem0     |      9.9  |        26  |  0.25 |  0.75 |  0.5  | 0.54 |
 | lightrag |     77.6  |      3670  |  1.0  |  1.0  |  0.38 | 1.0  |
 | letta    |     48.3  |      2470  |  0.62 |  1.0  |  0.5  | 0.79 |
 
@@ -217,12 +217,14 @@ How to read it:
   surfacing a stale fact above the right one.
 - **vector** finds the answer in the top-3 every time (`hit@3 = 1.0`) but often
   ranks a distractor first (`hit@1 = 0.38`).
-- **mem0** rephrases/merges facts on extraction, which trims volume but here cost
-  some recall. `clean` is low across the board — the dataset deliberately pits
-  stale vs current facts, which pure vector similarity can't resolve.
+- **mem0** rephrases/merges facts on extraction (trimming volume) and ties Letta
+  for the best `clean` (0.5) — proper top-k ranking keeps stale facts from
+  outranking the answer. It's also the highest-variance backend: across runs its
+  `hit@1` swung 0.25↔0.75. The dataset deliberately pits stale vs current facts,
+  which pure vector similarity still can't fully resolve (`clean` tops out at 0.5).
 
 Caveats: numbers vary run-to-run (LLM extraction is non-deterministic — mem0
-most); latency is single-run. `stored` (not shown) differs by design: extracted
+most, e.g. `hit@1` 0.25↔0.75 above); latency is single-run. `stored` (not shown) differs by design: extracted
 facts vs raw passages vs one graph doc. Rules of thumb: speed/personalization →
 mem0/vector; relational/multi-hop reasoning → lightrag; long-running agents with
 precise recall → letta.

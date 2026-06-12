@@ -44,12 +44,19 @@ def test_mem0_live():
     cfg.long_term_backend = "mem0"
     cfg.mem0_vector_path = tempfile.mkdtemp(prefix="mem0q_")
     mm = MemoryManager(cfg)
-    mm.add_turn("s", "bob", Message("user", "I'm Bob and I'm allergic to peanuts"))
+    for fact in [
+        "I'm Bob and I'm allergic to peanuts",
+        "I live in Paris and drive a Tesla",
+        "I play guitar and code in Python",
+    ]:
+        mm.add_turn("s", "bob", Message("user", fact))
     mm.end_session("s", "bob")
     hits = mm.recall("bob", "what is the user allergic to", k=3)
     assert hits, "no memories returned"
     assert any("peanut" in h.text.lower() for h in hits), [h.text for h in hits]
-    print("ok  mem0 live: extracted + recalled peanut allergy")
+    # regression: mem0 search must honor the limit (uses top_k, not limit)
+    assert len(mm.recall("bob", "tell me about the user", k=2)) <= 2, "limit ignored"
+    print("ok  mem0 live: extracted, recalled, and respected the result limit")
 
 
 def test_mem0_async_consolidation_live():

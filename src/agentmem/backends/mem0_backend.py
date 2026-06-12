@@ -91,8 +91,10 @@ class Mem0Backend:
         return [self._to_item(r) for r in self._unwrap(res)]
 
     def search(self, query: str, user_id: str, limit: int = 5) -> list[MemoryItem]:
-        res = self._mem.search(query, filters={"user_id": user_id}, limit=limit)
-        return [self._to_item(r) for r in self._unwrap(res)]
+        # mem0 2.x search takes `top_k` (not `limit`); a wrong kwarg is silently
+        # ignored and returns everything, so slice too as a hard guarantee.
+        res = self._mem.search(query, filters={"user_id": user_id}, top_k=limit)
+        return [self._to_item(r) for r in self._unwrap(res)][:limit]
 
     def get_all(self, user_id: str) -> list[MemoryItem]:
         res = self._mem.get_all(filters={"user_id": user_id})
