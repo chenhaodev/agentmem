@@ -99,8 +99,9 @@ export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
 export TOKENIZERS_PARALLELISM=false RUN_LIVE=1
 python tests/test_live.py
 
-# Share short-term memory across processes:
-SHORT_TERM_STORE=redis REDIS_URL=redis://localhost:6379/0 python demo.py  # pip install redis
+# Share short-term memory across processes (verified live):
+docker run -d --name agentmem-redis -p 6379:6379 redis:7-alpine   # pip install redis
+SHORT_TERM_STORE=redis REDIS_URL=redis://localhost:6379/0 python demo.py
 
 # Store long memory in several frameworks at once (cross-backend routing):
 LONG_TERM_BACKEND=vector+mem0 python demo.py
@@ -151,8 +152,10 @@ python tests/test_smoke.py     # fully offline; also discoverable via `pytest te
   `sentence-transformers` or supply a live `DEEPSEEK_API_KEY` for real quality.
 - The `vector` backend is in-memory by default; set `VECTOR_PERSIST_PATH` to
   persist to disk (atomic JSON write, auto-loaded on startup).
-- Short-term sharing across processes: set `SHORT_TERM_STORE=redis`. Within a
-  single process the default `memory` store already shares across agents.
+- Short-term sharing across processes: set `SHORT_TERM_STORE=redis` (verified
+  live — a write in one process is seen by another via a Redis list per session,
+  ring-buffer capped by `SHORT_TERM_MAX_TURNS`). Within a single process the
+  default `memory` store already shares across agents.
 - The `lightrag` backend builds a knowledge graph and does its own extraction,
   so it supports **add + search** (search returns graph-aware context). It does
   **not** support `get_all`/`delete` (no flat memory list) — reset by removing a

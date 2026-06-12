@@ -99,6 +99,54 @@ def test_lightrag_live():
     print("ok  lightrag live: graph built + relational recall + contract")
 
 
+def test_redis_short_term_cross_process():
+    """The point of Redis short-term is cross-process sharing: a CHILD process
+    writes turns, this parent reads the same session, and the ring buffer cap
+    holds across the boundary. Needs a reachable Redis (skips otherwise)."""
+    if not LIVE:
+        print("skip redis (set RUN_LIVE=1 to run)")
+        return
+    import subprocess
+
+    import redis as _redis
+
+    url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    try:
+        _redis.Redis.from_url(url).ping()
+    except Exception as e:
+        print(f"skip redis (not reachable at {url}: {e})")
+        return
+
+    from agentmem import Config
+    from agentmem.short_term import build_short_term
+
+    cfg = Config.from_env()
+    cfg.short_term_store = "redis"
+    cfg.short_term_max_turns = 3
+    session = "redis-xproc"
+    parent = build_short_term(cfg)
+    parent.clear(session)
+
+    # child process writes 4 turns into the same Redis session
+    child = (
+        "import sys; sys.path.insert(0,'src')\n"
+        "from agentmem import Config\n"
+        "from agentmem.short_term import build_short_term\n"
+        "from agentmem.types import Message\n"
+        "c=Config.from_env(); c.short_term_store='redis'; c.short_term_max_turns=3\n"
+        "st=build_short_term(c)\n"
+        "for x in ['a','b','c','d']: st.append('redis-xproc', Message('user', x))\n"
+    )
+    subprocess.run([sys.executable, "-c", child], env=os.environ, check=True)
+
+    # parent (separate process) sees the child's writes — cross-process sharing
+    got = [m.content for m in parent.recent(session)]
+    assert got == ["b", "c", "d"], f"cross-process/ring-buffer wrong: {got}"
+    assert session in parent.sessions()
+    parent.clear(session)
+    print("ok  redis short-term: cross-process sharing + ring buffer cap")
+
+
 def test_router_vector_mem0_live():
     """Cross-backend routing: fan out a write to vector + mem0, merge reads."""
     if _skip("router"):
