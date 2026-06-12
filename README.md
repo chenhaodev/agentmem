@@ -1,5 +1,7 @@
 # agentmem — a switchable agent-memory middleware
 
+[![CI](https://github.com/chenhaodev/agentmem/actions/workflows/ci.yml/badge.svg)](https://github.com/chenhaodev/agentmem/actions/workflows/ci.yml)
+
 One interface over multiple agent-memory frameworks, with **short-term** and
 **long-term** memory cleanly separated. Powered by **DeepSeek-V4-Flash**
 (OpenAI-compatible). Switch the long-term backend with a single env var.
@@ -215,8 +217,8 @@ python tests/test_smoke.py     # fully offline; also discoverable via `pytest te
 CI (`.github/workflows/ci.yml`) byte-compiles everything and runs the offline
 suite on Python 3.10 / 3.11 / 3.12 for every push and PR — core deps only, no
 backend servers. The live suite (`tests/test_live.py`) self-skips without
-`RUN_LIVE=1` and is not run in CI. Add a status badge once the repo is on GitHub:
-`![CI](https://github.com/<owner>/<repo>/actions/workflows/ci.yml/badge.svg)`.
+`RUN_LIVE=1` and is not run in CI. (The CI badge above renders publicly once the
+repo is made public.)
 
 ## Configuration (env / `.env`)
 
