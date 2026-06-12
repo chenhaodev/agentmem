@@ -192,6 +192,12 @@ reasoning → lightrag; long-running agents → letta.
 python tests/test_smoke.py     # fully offline; also discoverable via `pytest tests/`
 ```
 
+CI (`.github/workflows/ci.yml`) byte-compiles everything and runs the offline
+suite on Python 3.10 / 3.11 / 3.12 for every push and PR — core deps only, no
+backend servers. The live suite (`tests/test_live.py`) self-skips without
+`RUN_LIVE=1` and is not run in CI. Add a status badge once the repo is on GitHub:
+`![CI](https://github.com/<owner>/<repo>/actions/workflows/ci.yml/badge.svg)`.
+
 ## Configuration (env / `.env`)
 
 | Var | Default | Meaning |
